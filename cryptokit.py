@@ -1,12 +1,19 @@
 import json
 import argparse
 import math
+import hashlib
 
 def loadWords():
     with open("words_dictionary.json", "r") as f:
         english_dict = json.load(f)
 
     return english_dict
+
+def loadPasswords():
+    with open("commonpass.txt","r") as f:
+        passwords = f.readlines()
+
+    return passwords
 
 def isEnglishText(dictionary, ciphertext):
     txt = ciphertext.split()
@@ -121,37 +128,14 @@ def bruteForceVigenere(alphabet, ciphertext, dictionary):
     vigenere4keys(alphabet,ciphertext,dictionary)
 
 
+def bruteForceHash(hashfunc, digest, passwords):
+    if hashfunc == 'md5':
+        for pwd in passwords:
+            dgst = hashlib.md5(pwd)
+            if dgst.hexdigest() == digest:
+                print("Password found: " + pwd + " for digest " + digest)
+                return
 
-def transpositionCipher(ciphertext):
-
-
-    for key in range(len(ciphertext)):
-        # The number of "columns" in our transposition grid:
-        numOfColumns = math.ceil(len(ciphertext) / (key+1))
-        # The number of "rows" in our grid will need:
-        numOfRows = key+1
-        # The number of "shaded boxes" in the last "column" of the grid:
-        numOfShadedBoxes = (numOfColumns * numOfRows) - len(ciphertext)
-
-        # Each string in plaintext represents a column in the grid.
-        plaintext = [''] * int(numOfColumns)
-
-        # The col and row variables point to where in the grid the next
-        # character in the encrypted message will go.
-        col = 0
-        row = 0
-
-        for symbol in ciphertext:
-            plaintext[col] += symbol
-            col += 1 # point to next column
-
-            # If there are no more columns OR we're at a shaded box, go back to
-            # the first column and the next row.
-            if (col == numOfColumns) or (col == numOfColumns - 1 and row >= numOfRows - numOfShadedBoxes):
-                col = 0
-                row += 1
-
-        print(''.join(plaintext))
 
 
 
@@ -160,33 +144,53 @@ def main():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-c', '--cipher', dest='cipher', choices=['ceasar', 'vigenere2k', 'vigenere3k', 'vigenere4k', 'all'], required=True)
-    parser.add_argument('-a','--alphabet', dest = 'alphabet', required=True)
-    parser.add_argument('-ciphertext','--ciphertext', dest='ciphertext', required=True)
-
+    parser.add_argument('-c', '--cipher', dest='cipher', choices=['ceasar', 'vigenere2k', 'vigenere3k', 'vigenere4k', 'all'], required=False)
+    parser.add_argument('-a','--alphabet', dest = 'alphabet', required=False)
+    parser.add_argument('-ciphertext','--ciphertext', dest='ciphertext', required=False)
+    parser.add_argument('-hash', '--hash', dest='hashfunc', choices=['md5','sha1'])
+    parser.add_argument('-dgst','--digest', dest='digest')
     args = parser.parse_args()
 
     fmt = args.cipher
     alpha = args.alphabet
     ciphertext = args.ciphertext
+    hashfunc = args.hashfunc
+    digest = args.digest
 
     dictionary = loadWords()
+    mostCommonPasswords = loadPasswords()
 
-    if fmt == 'ceasar':
-        ceasarChipher(alpha,ciphertext, dictionary)
+    if fmt != None:
+        if fmt == 'ceasar':
+            ceasarChipher(alpha,ciphertext, dictionary)
 
-    elif fmt == 'vigenere2k':
-        vigenere2keys(alpha,ciphertext,dictionary)
+        elif fmt == 'vigenere2k':
+            vigenere2keys(alpha,ciphertext,dictionary)
 
-    elif fmt == 'vigenere3k':
-        vigenere3keys(alpha,ciphertext,dictionary)
+        elif fmt == 'vigenere3k':
+            vigenere3keys(alpha,ciphertext,dictionary)
 
-    elif fmt == 'vigenere4k':
-        vigenere4keys(alpha,ciphertext,dictionary)
+        elif fmt == 'vigenere4k':
+            vigenere4keys(alpha,ciphertext,dictionary)
 
-    elif fmt == 'all':
-        ceasarChipher(alpha, ciphertext, dictionary)
-        bruteForceVigenere(alpha,ciphertext,dictionary)
+        elif fmt == 'all':
+            ceasarChipher(alpha, ciphertext, dictionary)
+            bruteForceVigenere(alpha,ciphertext,dictionary)
+
+    elif hashfunc != None and digest != None:
+        if hashfunc == 'md5':
+            bruteForceHash(hashfunc, digest, mostCommonPasswords)
+
+        elif hashfunc == 'sha1':
+            bruteForceHash(hashfunc,digest, mostCommonPasswords)
+
+        else:
+            print("Hash function not supported!")
+
+    else:
+        print("No arguments provided")
+
+
 
 if __name__ == "__main__":
     main()
